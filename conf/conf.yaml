@@ -1,0 +1,10 @@
+MicroServiceDockerfile: 
+DockerRepo: 
+DockerRepoUser: 
+DockerRepoPassFile: 
+DockerRepoUrl: 
+HelmRepo: 
+HelmValuesPath: 
+kubeCtxtest: 
+kubeCtxstage: 
+kubeCtxproduction: 

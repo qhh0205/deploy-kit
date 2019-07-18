@@ -1,0 +1,9 @@
+app:
+  event:
+    gitUrl: ''
+    buildScriptPath: ''
+web:
+  admin:
+    gitUrl: ''
+    buildScriptPath: ''
+  
