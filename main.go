@@ -405,7 +405,7 @@ func finishedSuccessOutput(step string) {
 		fmt.Print(Green("="))
 	}
 	fmt.Print("\n")
-	step = fmt.Sprintf("\tStep%d: [ %s ] ", step)
+	step = fmt.Sprintf("\tStep: [ %s ] ", step)
 	if len(step) < terminalWidth {
 		for i := 0; i < (terminalWidth - len(step)); i++ {
 			step += "*"
