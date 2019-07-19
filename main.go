@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/buger/goterm"
+	. "github.com/logrusorgru/aurora"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v3"
@@ -228,7 +231,7 @@ func deployMicroService(service, branch, env string) error {
 		return errors.New(fmt.Sprintf("Error: No such service: %s", service))
 	}
 
-	fmt.Println("Step1: [ Pull Code ] *******************************************")
+	stepOutput("Pull Code...", 1)
 	tmpDir, err := ioutil.TempDir("/tmp", "deploy")
 	if err != nil {
 		return err
@@ -241,7 +244,7 @@ func deployMicroService(service, branch, env string) error {
 		return err
 	}
 
-	fmt.Println("Step2: [ Build Package ] ***************************************")
+	stepOutput("Build Package...", 2)
 	mvnBuild := fmt.Sprintf("cd %s/%s && sh build.sh", tmpDir, buildScriptPath)
 	fmt.Println(mvnBuild)
 	err = RunCommand("bash", "-c", "-x", mvnBuild)
@@ -249,7 +252,7 @@ func deployMicroService(service, branch, env string) error {
 		return err
 	}
 
-	fmt.Println("Step3: [ Build Docker Image ] **********************************")
+	stepOutput("Build Docker Image...", 3)
 	_, err = CopyFile(fmt.Sprintf("%s/%s/Dockerfile", tmpDir, buildScriptPath),
 		fmt.Sprintf("%s/.dpcfg/%s", os.Getenv("HOME"), conf["MicroServiceDockerfile"]))
 	if err != nil {
@@ -272,8 +275,7 @@ func deployMicroService(service, branch, env string) error {
 		return err
 	}
 
-	fmt.Println("Step4: [ Push Docker Image ] ***********************************")
-
+	stepOutput("Push Docker Image...", 4)
 	dockerLogin := fmt.Sprintf("docker login -u %s -p \"$(cat %s)\" %s", conf["DockerRepoUser"],
 		fmt.Sprintf("%s/.dpcfg/%s", os.Getenv("HOME"), conf["DockerRepoPassFile"]), conf["DockerRepoUrl"])
 	err = RunCommand("bash", "-c", dockerLogin)
@@ -287,7 +289,7 @@ func deployMicroService(service, branch, env string) error {
 	}
 	defer RemoveDockerImage(fmt.Sprintf("%s:%s", dockerImageName, dockerImageTag))
 
-	fmt.Println("Step5: [ Deploy to Kubernetes ] ********************************")
+	stepOutput("Deploy to Kubernetes...", 5)
 	helmRepoAdd := fmt.Sprintf("helm repo add deploy %s", conf["HelmRepo"])
 	err = RunCommand("bash", "-c", "-x", helmRepoAdd)
 	if err != nil {
@@ -299,12 +301,13 @@ func deployMicroService(service, branch, env string) error {
 	} else {
 		appName = service
 	}
-	helmInstall := fmt.Sprintf(`helm upgrade --wait --timeout 600 --install -f %s/default -f %s/values/%s/values-%s.yaml --set 'image.tag=%s,image.repository=%s' --kubeconfig %s --kube-context %s --namespace %s %s deploy/microservice`,
-		conf["HelmValuesPath"], conf["HelmValuesPath"], service, env, dockerImageTag, service, fmt.Sprintf("%s/.dpcfg/kube-config", os.Getenv("HOME")), conf[fmt.Sprintf("kubeCtx%s", env)], env, appName)
+	helmInstall := fmt.Sprintf(`helm upgrade --wait --timeout 600 --install -f %s/default-%s.yaml -f %s/values/%s/values-%s.yaml --set 'image.tag=%s,image.repository=%s' --kubeconfig %s --kube-context %s --namespace %s %s deploy/microservice`,
+		conf["HelmValuesPath"], env, conf["HelmValuesPath"], service, env, dockerImageTag, service, fmt.Sprintf("%s/.dpcfg/kube-config", os.Getenv("HOME")), conf[fmt.Sprintf("kubeCtx%s", env)], env, appName)
 	err = RunCommand("bash", "-c", "-x", helmInstall)
 	if err != nil {
 		return err
 	}
+	finishedSuccessOutput("Finished seuccess!")
 	return nil
 }
 
@@ -373,4 +376,79 @@ func RunCommand(name string, arg ...string) error {
 func RemoveDockerImage(image string) error {
 	dockerRmi := fmt.Sprintf("docker rmi %s", image)
 	return RunCommand("bash", "-c", dockerRmi)
+}
+
+func stepOutput(step string, n int) {
+	terminalWidth := goterm.Width()
+	for i := 0; i < terminalWidth; i++ {
+		fmt.Print(Green("="))
+	}
+	fmt.Print("\n")
+	step = fmt.Sprintf("\tStep%d: [ %s ] ", n, step)
+	if len(step) < terminalWidth {
+		for i := 0; i < (terminalWidth - len(step)); i++ {
+			step += "*"
+		}
+	} else {
+		step = Resize(step, uint(terminalWidth))
+	}
+	fmt.Println(Green(step))
+	for i := 0; i < terminalWidth; i++ {
+		fmt.Print(Green("="))
+	}
+	fmt.Print("\n")
+}
+
+func finishedSuccessOutput(step string) {
+	terminalWidth := goterm.Width()
+	for i := 0; i < terminalWidth; i++ {
+		fmt.Print(Green("="))
+	}
+	fmt.Print("\n")
+	step = fmt.Sprintf("\tStep%d: [ %s ] ", step)
+	if len(step) < terminalWidth {
+		for i := 0; i < (terminalWidth - len(step)); i++ {
+			step += "*"
+		}
+	} else {
+		step = Resize(step, uint(terminalWidth))
+	}
+	fmt.Println(Green(step))
+	for i := 0; i < terminalWidth; i++ {
+		fmt.Print(Green("="))
+	}
+	fmt.Print("\n")
+}
+
+// PadRight returns a new string of a specified length in which the end of the current string is padded with spaces or with a specified Unicode character.
+func PadRight(str string, length int, pad byte) string {
+	if len(str) >= length {
+		return str
+	}
+	buf := bytes.NewBufferString(str)
+	for i := 0; i < length-len(str); i++ {
+		buf.WriteByte(pad)
+	}
+	return buf.String()
+}
+
+// Resize resizes the string with the given length. It ellipses with '...' when the string's length exceeds
+// the desired length or pads spaces to the right of the string when length is smaller than desired
+func Resize(s string, length uint) string {
+	n := int(length)
+	if len(s) == n {
+		return s
+	}
+	// Pads only when length of the string smaller than len needed
+	s = PadRight(s, n, ' ')
+	if len(s) > n {
+		b := []byte(s)
+		var buf bytes.Buffer
+		for i := 0; i < n-3; i++ {
+			buf.WriteByte(b[i])
+		}
+		buf.WriteString("...")
+		s = buf.String()
+	}
+	return s
 }

@@ -57,5 +57,7 @@ deploy web -s admin -b master -e stage
 go get github.com/olekukonko/tablewriter
 go get github.com/urfave/cli
 go get gopkg.in/yaml.v3
+go get github.com/buger/goterm
+go get github.com/logrusorgru/aurora
 ```
 
