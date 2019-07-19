@@ -250,7 +250,7 @@ func deployMicroService(service, branch, env string) error {
 	}
 
 	fmt.Println("Step3: [ Build Docker Image ] **********************************")
-	_, err = CopyFile(fmt.Sprintf("%s/%s/%s", tmpDir, buildScriptPath, conf["MicroServiceDockerfile"]),
+	_, err = CopyFile(fmt.Sprintf("%s/%s/Dockerfile", tmpDir, buildScriptPath),
 		fmt.Sprintf("%s/.dpcfg/%s", os.Getenv("HOME"), conf["MicroServiceDockerfile"]))
 	if err != nil {
 		return err
@@ -273,8 +273,9 @@ func deployMicroService(service, branch, env string) error {
 	}
 
 	fmt.Println("Step4: [ Push Docker Image ] ***********************************")
-	dockerLogin := fmt.Sprintf("docker login -u %s -p `cat %s` %s", conf["DockerRepoUser"],
-		fmt.Sprintf("%s/.dpcfg/%s", os.Getenv("Home"), conf["DockerRepoPassFile"]), conf["DockerRepoUrl"])
+
+	dockerLogin := fmt.Sprintf("docker login -u %s -p \"$(cat %s)\" %s", conf["DockerRepoUser"],
+		fmt.Sprintf("%s/.dpcfg/%s", os.Getenv("HOME"), conf["DockerRepoPassFile"]), conf["DockerRepoUrl"])
 	err = RunCommand("bash", "-c", "-x", dockerLogin)
 	if err != nil {
 		return err
@@ -357,7 +358,7 @@ func RunCommand(name string, arg ...string) error {
 	for {
 		tmp := make([]byte, 1024)
 		_, err := stdout.Read(tmp)
-		fmt.Println(string(tmp))
+		fmt.Print(string(tmp))
 		if err != nil {
 			break
 		}
