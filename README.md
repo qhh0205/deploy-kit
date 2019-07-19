@@ -1,5 +1,5 @@
 ### deploy-kit
-基于 Golang 的容器应用部署命令行工具，支持前端、后端部署。该命令行应用基于 golang 第三方 cli 包构建。
+基于 Golang 的容器应用部署命令行工具，支持前端、后端部署。该命令行应用基于 golang 第三方 [cli](https://github.com/urfave/cli) 包构建。
 
 ### Usage
 部署两类服务：app（微服务），web（前端服务），部署微服务指定 app 命令，部署前端服务指定 web 命令。
