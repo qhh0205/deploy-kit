@@ -276,7 +276,7 @@ func deployMicroService(service, branch, env string) error {
 
 	dockerLogin := fmt.Sprintf("docker login -u %s -p \"$(cat %s)\" %s", conf["DockerRepoUser"],
 		fmt.Sprintf("%s/.dpcfg/%s", os.Getenv("HOME"), conf["DockerRepoPassFile"]), conf["DockerRepoUrl"])
-	err = RunCommand("bash", "-c", "-x", dockerLogin)
+	err = RunCommand("bash", "-c", dockerLogin)
 	if err != nil {
 		return err
 	}
